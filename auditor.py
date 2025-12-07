@@ -239,10 +239,29 @@ class Auditor:
             current_node = tree1.children[dif]
             differences.append((current_node.name, 'Removed'))
             currentlst = self.get_rest(current_node, removed=True)
+            differences.extend(currentlst)
 
-        # for key that are in both trees, recursively compare their children
-        for common_key in keys1 & keys2:
-            differences.extend(self.compare_trees(tree1.children[common_key], tree2.children[common_key]))
+        #find common keys in both trees
+        intersection = keys1 & keys2
+
+        #iterate over the intersection.
+        for common_key in intersection:
+            #retrieve the nodes for the common key
+            node1 = tree1.children[common_key]
+            node2 = tree2.children[common_key]
+
+            #if both nodes are directories and their sizes differ, record the change.
+            if isinstance(node1, DirectoryNode) and isinstance(node2, DirectoryNode):
+                if node1.size != node2.size:
+                    differences.append((node1.name, f'Size changed from {node1.size} to {node2.size}'))
+
+                #recursively compare the children of the directory nodes.
+                differences.extend(self.compare_trees(node1, node2))
+
+            #if both nodes are files, compare their fingerprints.
+            elif isinstance(node1, FileNode) and isinstance(node2, FileNode):
+                if node1.fingerprint != node2.fingerprint:
+                    differences.append((node1.name, f'Fingerprint changed from {node1.fingerprint} to {node2.fingerprint}'))
 
         return differences
 
