@@ -84,7 +84,7 @@ class DirectoryNode(TreeNode):
         Raises:
             ValueError: If the child node pass has no inode value.
         """
-        if child_node is None:
+        if child_node is None or child_node.inode is None:
             raise ValueError("Child node must have an inode value")
         self.__children[child_node.inode] = child_node
 

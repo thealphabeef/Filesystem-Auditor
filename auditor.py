@@ -1,5 +1,3 @@
-from msilib import Directory
-
 from data_structures import *
 from pathlib import Path
 import datetime
