@@ -142,21 +142,54 @@ class Auditor:
         #Loop over that list
         for entry in path.iterdir():
             #for each iteration of the loop, get the st_ino and store it to a variable.
-            new = entry.stat().st_ino
+            entry_stat = entry.stat()
+            inode = entry_stat.st_ino
             #call the is_dir method on the current object from the list, if it returns true, createa  variable called
             #sub_node and set it equal to self.find_files_and_folder
-            if new.is_dir():
+            if entry.is_dir():
                 sub_node = self.find_files_and_folders(entry)
+                directorynode.add_child(sub_node)
             else:
                 #if the call is false, we should be dealing with a file and not a directory.
-                newfile = FileNode(entry.absolute(), entry.st_size, new)
-
-                #set the new FileNode's fingerprint equal to
-                newfile.fingerprint = self.fingerprint_file(entry.resolve())
+                newfile = FileNode(entry.absolute(), inode, entry_stat.st_size)
 
                 #add the new FileNode to the DirectoryNode create above
                 directorynode.add_child(newfile)
-        return DirectoryNode
+        return directorynode
+
+    def get_rest(self, node, removed=True):
+        """Helper function to start at a node, and make a list of strings that provide info about children nodes.
+
+        Args:
+            node: The node to start at.
+            removed (bool): To determine whether we are removing or not. Defaults to True.
+
+        Returns:
+            lst: The list of strings the function creates.
+        """
+
+        # Create an empty list
+        lst = []
+
+        #Base case is when a node has no more children nodes.
+        if not node.children:
+            return lst
+
+        # iterate over any children that the node might have
+        for child in node.children:
+            # then add a string of the form 'Added' or 'Removed' depending on whether the removed parameter was True or False
+            if removed:
+                lst.append((child.name, 'Removed'))
+            else:
+                lst.append((child.name, 'Added'))
+        # Call itself recursively on any directory nodes it encounters.
+
+        # return the list of strings the function creates
+        return lst
+
+
+
+
 
 
 
