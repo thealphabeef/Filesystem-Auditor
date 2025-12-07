@@ -265,6 +265,33 @@ class Auditor:
 
         return differences
 
+    def audit(self):
+        """Run an audit of the configured path."""
+
+        print(f"Audit started at {self.__start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+
+        try:
+            self.__old_root = self.read_tree(self.__input_file)
+        except OSError:
+            self.__old_root = None
+
+        self.__new_root = self.find_files_and_folders(self.__path)
+
+        differences = self.compare_trees(self.__old_root, self.__new_root)
+
+        self.write_tree(self.__new_root, self.__output_file)
+
+        end_time = datetime.datetime.now()
+        print(f'Audit finished at {end_time.strftime("%Y-%m-%d %H:%M:%S")}')
+
+        if self.__tree:
+            print(self.get_tree(self.__new_root))
+
+        if len(differences) == 0:
+            print('No differences were found.')
+        else:
+            for name, change in differences:
+                print(f'{change}: {name}')
 
 
 
