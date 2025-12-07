@@ -1,3 +1,5 @@
+from msilib import Directory
+
 from data_structures import *
 from pathlib import Path
 import datetime
@@ -34,8 +36,8 @@ class Auditor:
         args = parser.parse_args()
 
         self.__path = args.path
-        self.__input_file = args.input_file if args.input_file is not 'audit.log' else 'audit.log'
-        self.__output_file = args.output_file if args.output_file is not 'audit.log' else 'audit.log'
+        self.__input_file = args.input_file or 'audit.log'
+        self.__output_file = args.output_file or 'audit.log'
         self.__verbose = args.verbose
         self.__tree = args.tree
         self.__start_time = datetime.datetime.now()
@@ -57,13 +59,13 @@ class Auditor:
         """Take an object from a pickled file and restore it to memory.
 
         Args:
-            root (Node): Represents the top of our tree
+            root (TreeNode): Represents the top of our tree
             path: The place in which we wish to save to on the disk.
         """
-        if not isinstance(root, Node):
+        if not isinstance(root, TreeNode):
             raise IOError
-        if not Path(path).exists():
-            raise OSError("The file is not there.")
+        if not Path(path).parent.exists():
+            raise OSError("The destination directory doesn't exist")
 
         with open(path, 'wb') as f:
             pickle.dump(root, f)
@@ -102,19 +104,60 @@ class Auditor:
         """
 
         #Create a string of spaces, There should be three times the value of level spaces.
+        tree_str = " " * (3 * level)
         #Add to the string the '|' Character.
+        tree_str += "|"
         #Add to the string '-' characters. Add three for each level.
+        tree_str += "-" * (3 * level)
 
         #Check if the current node (root) is a DirectoryNode. If it is add the current node's name and a newline to the
         #string. This should add the entire path of the directory to the string.
-
-        #If it was not a directory, add only the part of the path that is the file's name. For instance if you had
-        #/SavedStuff/Documents/my_file, only add 'my_file' to the string.
-
-        #If the node is a directory, loop over every child, and call the function recursively with that child. Pass the
-        #value of level + 1 for the recursive call.
+        if isinstance(root, DirectoryNode):
+            tree_str += f"{root.name}\n"
+            #If it was not a directory, add only the part of the path that is the file's name. For instance if you had
+            #/SavedStuff/Documents/my_file, only add 'my_file' to the string.
+            for child in root.children.values():
+                tree_str += self.get_tree(child, level + 1)
+        else:
+            #If the node is a directory, loop over every child, and call the function recursively with that child. Pass the
+            #value of level + 1 for the recursive call.
+            tree_str += f"{Path(root.name).name}\n"
 
         #Return the string
+        return tree_str
+
+    def find_files_and_folders(self, directory):
+        """Takes a directory, and recursively lists all of the files and folders within it."""
+
+        #using pathlib library to create a Path object.
+        path = Path(directory)
+
+        #this will be the file (or folder)'s unique id.
+        inode = path.stat().st_ino
+
+        directorynode = DirectoryNode(path.absolute(), inode)
+
+        #get a list of all the files and folders in the current dictionary.
+
+        #Loop over that list
+        for entry in path.iterdir():
+            #for each iteration of the loop, get the st_ino and store it to a variable.
+            new = entry.stat().st_ino
+            #call the is_dir method on the current object from the list, if it returns true, createa  variable called
+            #sub_node and set it equal to self.find_files_and_folder
+            if new.is_dir():
+                sub_node = self.find_files_and_folders(entry)
+            else:
+                #if the call is false, we should be dealing with a file and not a directory.
+                newfile = FileNode(entry.absolute(), entry.st_size, new)
+
+                #set the new FileNode's fingerprint equal to
+                newfile.fingerprint = self.fingerprint_file(entry.resolve())
+
+                #add the new FileNode to the DirectoryNode create above
+                directorynode.add_child(newfile)
+        return DirectoryNode
+
 
 
 
