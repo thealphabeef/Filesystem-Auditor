@@ -208,9 +208,12 @@ class Auditor:
             tree2 = None
             return self.get_rest(tree1, removed=True)
 
+        if not isinstance(tree1, DirectoryNode) or not isinstance(tree2, DirectoryNode):
+            return differences
+
         #make two sets, the dictionaries are keyed on the files' inodes
-        keys1 = {tree1.children.values()}
-        keys2 = {tree2.children.values()}
+        keys1 = set(tree1.children.keys())
+        keys2 = set(tree2.children.keys())
 
         #find the difference of the second set from the first
         difference = keys2 - keys1
@@ -218,19 +221,30 @@ class Auditor:
         #iterate over the difference.
         for dif in difference:
             #For each entry in the difference, add an entry to our differences list that says something along the lines of "Added ".
-            differences.append('Added ')
+            current_node = tree2.children[dif]
+            differences.append((current_node.name, 'Added'))
 
             # Get the Node from the second tree's children with the current key.
-            currentkey = tree2.value(dif)
+            currentkey = tree2.children[dif]
 
             # Call get_rest on that Node with removed=False. Extend the differences list with the list that you got back from get_rest by using the extend() function of lists.
             # This purpose of this code is to show which files have been added to a Node since our last audit.
-            currentlst = currentkey.get_rest(removed=False)
+            currentlst = self.get_rest(currentkey, removed=False)
             differences.extend(currentlst)
 
         #do the same fo keys1-keys2. instead of an add message for each entry, provide a Removed <filename> message.
         #dont forget to use remove=True in your call to get_rest
 
+        for dif in keys1 - keys2:
+            current_node = tree1.children[dif]
+            differences.append((current_node.name, 'Removed'))
+            currentlst = self.get_rest(current_node, removed=True)
+
+        # for key that are in both trees, recursively compare their children
+        for common_key in keys1 & keys2:
+            differences.extend(self.compare_trees(tree1.children[common_key], tree2.children[common_key]))
+
+        return differences
 
 
 
