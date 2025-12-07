@@ -172,20 +172,64 @@ class Auditor:
         lst = []
 
         #Base case is when a node has no more children nodes.
-        if not node.children:
+        if not isinstance(node, DirectoryNode) or not node.children:
             return lst
 
         # iterate over any children that the node might have
-        for child in node.children:
+        for child in node.children.values():
             # then add a string of the form 'Added' or 'Removed' depending on whether the removed parameter was True or False
             if removed:
                 lst.append((child.name, 'Removed'))
             else:
                 lst.append((child.name, 'Added'))
-        # Call itself recursively on any directory nodes it encounters.
+            # Call itself recursively on any directory nodes it encounters.
+            if isinstance(child, DirectoryNode):
+                lst.extend(self.get_rest(child, removed))
 
         # return the list of strings the function creates
         return lst
+
+    def compare_trees(self, tree1, tree2):
+        """Compare two trees.
+
+        Args:
+            tree1: The first tree to compare.
+            tree2: The second tree to compare.
+        """
+
+        #differences will hold strings with info about differences in two trees.
+        differences = []
+
+        #our base cases are when either tree1 or tree2 are empty. In those cases they will hold None.
+        if not tree1:
+            tree1 = None
+            return self.get_rest(tree2, removed=False)
+        if not tree2:
+            tree2 = None
+            return self.get_rest(tree1, removed=True)
+
+        #make two sets, the dictionaries are keyed on the files' inodes
+        keys1 = {tree1.children.values()}
+        keys2 = {tree2.children.values()}
+
+        #find the difference of the second set from the first
+        difference = keys2 - keys1
+
+        #iterate over the difference.
+        for dif in difference:
+            #For each entry in the difference, add an entry to our differences list that says something along the lines of "Added ".
+            differences.append('Added ')
+
+            # Get the Node from the second tree's children with the current key.
+            currentkey = tree2.value(dif)
+
+            # Call get_rest on that Node with removed=False. Extend the differences list with the list that you got back from get_rest by using the extend() function of lists.
+            # This purpose of this code is to show which files have been added to a Node since our last audit.
+            currentlst = currentkey.get_rest(removed=False)
+            differences.extend(currentlst)
+
+        #do the same fo keys1-keys2. instead of an add message for each entry, provide a Removed <filename> message.
+        #dont forget to use remove=True in your call to get_rest
 
 
 
