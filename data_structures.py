@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 
 class TreeNode(ABC):
-    """Abstract method for a Node in a Tree."""
+    """Abstract method for a Node in a filesystem tree."""
 
     def __init__(self, name, inode = None):
-        """Initializes a Node in a Tree.
+        """Initializes a Node in the Tree.
 
         Args:
             name (str): The file's path on the disk.
@@ -13,107 +13,140 @@ class TreeNode(ABC):
         self.__name = name
         self.__inode = inode
 
-    #property getter and setters
     @property
     def name(self):
+        """Return the node's name."""
+
         return self.__name
 
     @property
     def inode(self):
+        """Return the inode number assigned to the node."""
+
         return self.__inode
 
     @inode.setter
     def inode(self, inode):
+        """Update the inode number for the node."""
+
         self.__inode = inode
 
     @property
     @abstractmethod
     def size(self):
-        return self.size
+        """Return the size of the node."""
 
     #start of actual methods
     def __repr__(self):
-        """Returns a string that represents the node.
+        """Returns a string that represents the node."""
 
-        Returns:
-            str: The string representation of the node.
-        """
         return f'{self.__name} - {self.size}'
 
     @abstractmethod
     def __eq__(self, other):
-        """An abstract method that compares one instance of a node to another.
-
-        Returns:
-            bool: True if the instances of nodes are equal, False otherwise.
-        """
-        pass
+        """Compare two nodes for equality."""
 
     @abstractmethod
     def __hash__(self):
-        """An abstract method that creates a hash for our object. This method allows
-        a node to be used as a key in a dictionary or to be used in sets.
-        """
-        pass
+        """Return a hash of the node."""
 
 class DirectoryNode(TreeNode):
-    """Initializes a node for the directory tree."""
+    """Represents a directory in the filesystem tree."""
 
     def __init__(self, name, inode = None):
-        """Initializes a node from the parent constructor.
+        """Initializes a directory node.
 
         Args:
             name (str): The file's path on the disk.
             inode (int, optional): The id number of the file.
-            children (set): Children nodes of the current node.
         """
         super().__init__(name, inode)
         self.__children = {}
 
-    #property getter and setters.
     @property
     def children(self):
+        """Return the children of the directory."""
+
         return self.__children
+
     @property
     def size(self):
-        """Recursively iterates over the node's children and sums the total size of all files therein."""
-        return self.size
+        """Sum the size of the directory's children."""
 
-    #start of methods
+        return sum(child.size for child in self.__children.values())
+
+
     def add_child(self, child_node):
-        """Check if the child node that is passed in has an inode value.
+        """Add a child node to the directory.
         Args:
-            child_node (TreeNode): The child node to be added.
-        Returns:
-            ValueError (Exception): If the child node pass has no inode value.
+            child_node (TreeNode): The child node to add.
+
+        Raises:
+            ValueError: If the child node pass has no inode value.
         """
-        pass
+        if child_node is None:
+            raise ValueError("Child node must have an inode value")
+        self.__children[child_node.inode] = child_node
 
     def __repr__(self):
-        """Returns the super class's representation.
+        """Return a representation that includes the number of children."""
 
-        Returns:
-            str: len(self.__children_) children
-        """
-        return f'({len(self.__children)} children'
+        return f'{self.name} ({len(self.__children)} children'
 
     def __eq__(self, other):
-        """Check if our name and our children are equal to the other node's name and other node's children.
+        """Compare directories by name and children."""
 
-        Returns:
-            bool: True if the name and children are equal, False otherwise.
-        """
-        pass
+        if not isinstance(other, DirectoryNode):
+            return False
+        return self.name == other.name and self.__children == other.children
 
     def __hash__(self):
-        """Creates a hash for our object.
+        """Return the hash of the directory node."""
 
-        Returns:
-            hash: hash((self.name, frozenset(self.__children.items()))
-        """
         return hash((self.name, frozenset(self.__children.items())))
 
+class FileNode(TreeNode):
+    """Represents a leaf node in the filesystem tree."""
+    def __init__(self, name, inode = None, size = 0):
+        """Initialize a file node with its size.
 
+        Args:
+            name (str): The file's path on the disk.
+            inode (int, optional): The id number of the file.
+            size (int): The file's size in bytes.
+        """
+        super().__init__(name, inode)
+        self.__size = size
 
+    @property
+    def size(self):
+        """Return the size of the file."""
 
+        return self.__size
 
+    @property
+    def fingerprint(self):
+        """Return a fingerprint that uniquely identifies the file node."""
+
+        return (self.name, self.inode, self.size)
+
+    def __eq__(self, other):
+        """Compare two file nodes for equality."""
+
+        if not isinstance(other, FileNode):
+            return False
+        return (
+            self.name == other.name
+            and self.inode == other.inode
+            and self.size == other.size
+        )
+
+    def __hash__(self):
+        """Return the hash of the file node."""
+
+        return hash((self.name, self.inode, self.size))
+
+    def __repr__(self):
+        """Return a string representation of the file node"""
+
+        return f'{self.name} - {self.size}'
